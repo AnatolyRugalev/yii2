@@ -58,17 +58,24 @@ class MysqlQueryBuilderTest extends QueryBuilderTest
         ]);
     }
 
-
 	public function testBuildSelectLock()
 	{
-		// expression with params
+		// exclusive lock
 		$query = (new Query())
 			->select('*')
 			->from('operations')
-			->orderBy(new Expression('SUBSTR(name, 3, :to) DESC, x ASC', [':to' => 4]));
-		list ($sql, $params) = $this->getQueryBuilder()->build($query);
-		$expected = $this->replaceQuotes('SELECT * FROM [[operations]] ORDER BY SUBSTR(name, 3, :to) DESC, x ASC');
+			->selectLock(Query::SELECT_LOCK_EXCLUSIVE);
+		list ($sql) = $this->getQueryBuilder()->build($query);
+		$expected = $this->replaceQuotes('SELECT * FROM [[operations]] FOR UPDATE');
 		$this->assertEquals($expected, $sql);
-		$this->assertEquals([':to' => 4], $params);
+
+		// shared lock
+		$query = (new Query())
+			->select('*')
+			->from('operations')
+			->selectLock(Query::SELECT_LOCK_SHARED);
+		list ($sql) = $this->getQueryBuilder()->build($query);
+		$expected = $this->replaceQuotes('SELECT * FROM [[operations]] LOCK IN SHARE MODE');
+		$this->assertEquals($expected, $sql);
 	}
 }
